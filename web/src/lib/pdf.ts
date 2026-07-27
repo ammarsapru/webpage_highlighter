@@ -12,6 +12,7 @@ export async function renderSummaryPdf(documentId: string, summaryHtml: string):
 <html>
   <head>
     <meta charset="utf-8" />
+    <style>* { margin: 0; padding: 0; }</style>
     <style>${SUMMARY_STYLES}</style>
   </head>
   <body>${summaryHtml}</body>

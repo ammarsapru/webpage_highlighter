@@ -76,9 +76,11 @@
 }
 
 /* Our own highlight marks, wrapped around selected text-layer spans/text nodes.
-   Background color is set inline per-highlight (see wrapRangeInMarks in pdf-highlight-dom.ts). */
+   Background color + opacity are set inline per-highlight (see wrapRangeInMarks in
+   pdf-highlight-dom.ts) - plain alpha transparency, not mix-blend-mode, since .textLayer's
+   own stacking context (position:absolute + z-index above) would stop a blend mode from
+   ever reaching the canvas painted behind/outside it. */
 .textLayer mark.hlx-mark {
   color: transparent;
   border-radius: 2px;
-  mix-blend-mode: multiply;
 }

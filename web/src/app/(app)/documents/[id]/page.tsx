@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import StatusBadge from "@/components/StatusBadge";
 import { colorLabel } from "@/lib/colors";
+import { SUMMARY_STYLES } from "@/lib/render-summary";
 import DocumentActions from "@/components/DocumentActions";
 import DocumentAutoRefresh from "@/components/DocumentAutoRefresh";
 
@@ -45,10 +46,13 @@ export default async function DocumentDetailPage({
       )}
 
       {document.status === "done" && document.summaryHtml ? (
-        <div
-          className="mt-8 [&_.summary]:max-w-none [&_.summary]:p-0"
-          dangerouslySetInnerHTML={{ __html: document.summaryHtml }}
-        />
+        <>
+          <style>{SUMMARY_STYLES}</style>
+          <div
+            className="mt-8 [&_.summary]:max-w-none [&_.summary]:p-0"
+            dangerouslySetInnerHTML={{ __html: document.summaryHtml }}
+          />
+        </>
       ) : document.status !== "error" ? (
         <div className="mt-10">
           <h2 className="text-lg font-medium mb-3">Highlights</h2>

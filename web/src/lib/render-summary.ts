@@ -69,26 +69,28 @@ export function buildSummaryHtml(params: {
     </article>`;
 }
 
+// Scoped entirely under .summary (never bare `body`/`h2`/etc.) so this can be safely
+// injected as-is into the dashboard page, which already has its own global styles.
 export const SUMMARY_STYLES = `
-  * { box-sizing: border-box; }
-  body {
+  .summary, .summary * { box-sizing: border-box; }
+  .summary {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     color: #1a1a1a;
     line-height: 1.55;
-    margin: 0;
-    padding: 0;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 48px 32px;
   }
-  .summary { max-width: 720px; margin: 0 auto; padding: 48px 32px; }
   .summary-header h1 { font-size: 28px; margin: 0 0 8px; }
   .summary-meta { font-size: 13px; color: #666; margin: 0 0 16px; }
   .summary-meta a { color: #666; }
   .summary-overview { font-size: 16px; color: #333; margin: 0 0 8px; }
-  .takeaways { background: #f7f7f8; border-radius: 10px; padding: 20px 24px; margin: 24px 0 32px; }
-  .takeaways h2 { margin-top: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }
-  .takeaways ul { margin: 0; padding-left: 20px; }
-  .takeaways li { margin-bottom: 6px; }
-  h2 { font-size: 20px; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; }
-  .highlight-block { margin-bottom: 28px; page-break-inside: avoid; }
+  .summary .takeaways { background: #f7f7f8; border-radius: 10px; padding: 20px 24px; margin: 24px 0 32px; }
+  .summary .takeaways h2 { margin-top: 0; font-size: 15px; text-transform: uppercase; letter-spacing: 0.04em; color: #555; }
+  .summary .takeaways ul { margin: 0; padding-left: 20px; }
+  .summary .takeaways li { margin-bottom: 6px; }
+  .summary h2 { font-size: 20px; border-bottom: 1px solid #e5e5e5; padding-bottom: 8px; }
+  .summary .highlight-block { margin-bottom: 28px; page-break-inside: avoid; }
   .highlight-passage {
     border-left: 4px solid;
     border-radius: 6px;

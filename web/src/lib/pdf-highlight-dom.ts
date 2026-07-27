@@ -37,7 +37,12 @@ export function wrapRangeInMarks(range: Range, color: string): string[] {
     const mark = document.createElement("mark");
     mark.className = "hlx-mark";
     mark.dataset.hlxId = `hlx-${++markIdCounter}`;
+    // pdf.js's .textLayer establishes its own CSS stacking context (position:absolute +
+    // z-index), so mix-blend-mode on a mark inside it can't reach the canvas painted
+    // behind/outside that stacking context - it would just paint solid and hide the text.
+    // Plain alpha transparency composites correctly regardless of stacking context.
     mark.style.background = color;
+    mark.style.opacity = "0.45";
     markIds.push(mark.dataset.hlxId);
 
     try {

@@ -13,7 +13,7 @@ interface StoredHighlight {
   markIds: string[];
 }
 
-const PAGE_SCALE = 1.4;
+const MAX_PAGE_SCALE = 1.6;
 
 export default function PdfHighlighter() {
   const router = useRouter();
@@ -49,11 +49,18 @@ export default function PdfHighlighter() {
       if (!container) return;
       container.innerHTML = "";
 
+      // The sidebar is always in the DOM (see JSX below) precisely so this measurement is
+      // stable - if it only mounted after `loaded` flipped true, pages would render at the
+      // pre-sidebar (wider) column size and then overflow once the sidebar appeared.
+      const containerWidth = container.clientWidth || 800;
+
       const textParts: string[] = [];
 
       for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
         const page = await pdf.getPage(pageNum);
-        const viewport = page.getViewport({ scale: PAGE_SCALE });
+        const unscaledWidth = page.getViewport({ scale: 1 }).width;
+        const scale = Math.min(containerWidth / unscaledWidth, MAX_PAGE_SCALE);
+        const viewport = page.getViewport({ scale });
 
         const pageWrapper = document.createElement("div");
         pageWrapper.className = "relative mx-auto mb-4 shadow-sm";
@@ -93,6 +100,7 @@ export default function PdfHighlighter() {
       setFullText(textParts.join("\n\n"));
       setLoaded(true);
     } catch (err) {
+      console.error("Failed to load PDF", err);
       setError(err instanceof Error ? err.message : "Failed to load PDF");
     } finally {
       setLoading(false);
@@ -170,12 +178,16 @@ export default function PdfHighlighter() {
             <input type="file" accept="application/pdf" className="hidden" onChange={onFileChange} disabled={loading} />
           </label>
         )}
+        {!loaded && error && <p className="text-sm text-red-500 mt-3">{error}</p>}
         <div ref={containerRef} onMouseUp={onMouseUp} className="select-text" />
         {toolbar && <ColorToolbar x={toolbar.x} y={toolbar.y} onPick={applyColor} />}
       </div>
 
-      {loaded && (
-        <aside className="w-80 shrink-0 sticky top-8 self-start space-y-4">
+      {/* Always mounted (even before a PDF loads) so the left column's width - and therefore
+          the scale pages render at - stays stable instead of shifting once this appears. */}
+      <aside className="w-80 shrink-0 sticky top-8 self-start space-y-4">
+        {loaded && (
+          <>
           <div>
             <label className="block text-sm font-medium mb-1">Title</label>
             <input
@@ -236,8 +248,9 @@ export default function PdfHighlighter() {
           >
             {submitting ? "Generating…" : "Generate summary"}
           </button>
-        </aside>
-      )}
+          </>
+        )}
+      </aside>
     </div>
   );
 }
