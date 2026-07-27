@@ -1,0 +1,57 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum DocumentStatus {
+  pending
+  processing
+  done
+  error
+}
+
+enum SourceType {
+  webpage
+  pdf
+}
+
+model Document {
+  id          String         @id @default(cuid())
+  title       String
+  sourceType  SourceType     @default(webpage)
+  sourceUrl   String?
+  pageContent String         // cleaned full-page/document text used as context for the LLM
+  status      DocumentStatus @default(pending)
+  errorMessage String?
+  summaryHtml String?        // compiled HTML summary produced by the LLM
+  pdfPath     String?        // path to generated PDF on disk, relative to storage dir
+  model       String?        // OpenRouter model used to generate the summary
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  highlights  Highlight[]
+}
+
+model Highlight {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  text       String
+  color      String   // hex color, e.g. #ffe066
+  note       String?
+  position   Int      @default(0) // order of appearance in the source document
+  createdAt  DateTime @default(now())
+}
+
+// Singleton row (id is always 1). The dashboard login password comes from the
+// DASHBOARD_PASSWORD env var, not from here.
+model Settings {
+  id               Int     @id @default(1)
+  apiTokenHash     String? // sha256 of the extension API token, shown once on creation
+  openRouterApiKey String? // overrides OPENROUTER_API_KEY env var when set
+  openRouterModel  String  @default("openai/gpt-4o-mini")
+}
