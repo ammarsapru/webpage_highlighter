@@ -33,25 +33,12 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local file-backed data store (used until Supabase is configured)
+/.local-data
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-/src/generated/prisma
-
-# app data
-/prisma/dev.db
-/prisma/dev.db-journal
-/storage/
-
-# copied by the postinstall script from pdfjs-dist
-/public/pdf.worker.min.mjs
-
-# auto-installed by `prisma init` (AI agent skill docs, not app code)
-/.agents/
-/.claude/
-/.windsurf/
-/skills-lock.json

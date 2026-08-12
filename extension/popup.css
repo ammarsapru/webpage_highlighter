@@ -1,0 +1,106 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 360px;
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.container {
+  padding: 16px;
+}
+
+h1 {
+  font-size: 18px;
+  margin: 0 0 14px;
+}
+
+.label {
+  display: block;
+  margin-top: 10px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.input,
+.textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px;
+  background: white;
+  color: #0f172a;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 64px;
+}
+
+.button {
+  width: 100%;
+  border: none;
+  border-radius: 12px;
+  margin-top: 10px;
+  padding: 10px;
+  cursor: pointer;
+  font-weight: 700;
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.button.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.button.danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.stats {
+  margin-top: 14px;
+  padding: 10px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.highlights {
+  margin-top: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.card {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.card-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #0f172a;
+}
+
+.status {
+  font-size: 12px;
+  color: #475569;
+}

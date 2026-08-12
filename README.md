@@ -1,116 +1,160 @@
-# Highlight Vault
+# Highlight Research Assistant MVP
 
-Highlight text on any webpage (via a browser extension) or in a PDF (via the dashboard's
-built-in viewer), in five different colors. Each set of highlights, plus the surrounding
-page/document content for context, is sent through an LLM on [OpenRouter](https://openrouter.ai)
-which explains each highlight in more depth and fills in the gaps using that context — all
-without altering the highlighted text itself. The result is compiled into a downloadable PDF,
-and every document you've captured lives in a dashboard where you can browse, re-generate, or
-delete it.
+This project is a working browser-extension + web-app system that lets users:
 
-The project has two parts that talk to each other over a small REST API:
+1. Highlight text on webpages.
+2. Save highlights into a session.
+3. Send the session to a web app.
+4. Store highlights locally (no setup) or in Supabase, once configured.
+5. Generate a rewrite that stitches the highlighted passages into one coherent piece, filling gaps using the full source page.
+6. Generate a PDF placeholder.
+7. Ask questions over saved highlights using a basic retrieval flow.
+8. Jump from a saved highlight back to the exact passage on the original page.
 
-- **`extension/`** — a Manifest V3 browser extension (Chrome/Edge/Brave/etc.) that lets you
-  select text on any page, pick a highlight color, and submit the highlights.
-- **`web/`** — a Next.js app: the dashboard (documents list, summary view, PDF upload +
-  highlighter, settings) and the API the extension talks to.
+This is intentionally an MVP foundation. The first goal is to make the capture → store → display loop work reliably.
 
-## How it fits together
+`web/` is now a real, runnable Next.js app (not just route/lib files to copy elsewhere) — see Phase 2.
 
+---
+
+## Project Structure
+
+```txt
+highlight-research-assistant-mvp/
+  extension/
+    manifest.json
+    contentScript.js
+    background.js
+    popup.html
+    popup.js
+    popup.css
+
+  web/
+    app/
+      dashboard/page.tsx
+      sessions/[id]/page.tsx
+      api/sessions/route.ts
+      api/sessions/[id]/summarize/route.ts
+      api/sessions/[id]/chat/route.ts
+      api/sessions/[id]/generate-pdf/route.ts
+    lib/
+      store/
+        index.ts        (picks local vs. Supabase backend)
+        localStore.ts    (default: JSON file under .local-data/)
+        supabaseStore.ts
+        types.ts         (DataStore interface)
+      supabaseServer.ts
+      ai.ts
+      pdf.ts
+      retrieval.ts
+      textFragment.ts
+    types/
+      index.ts
+    package.json, tsconfig.json, next.config.ts, etc.
+
+  supabase/
+    schema.sql
 ```
- ┌─────────────────┐   highlights + page text    ┌───────────────────────┐
- │ Browser extension│ ───────────────────────────▶│  POST /api/documents  │
- │ (any webpage)    │   (Bearer API token)        │                       │
- └─────────────────┘                              │  Next.js app (web/)   │
-                                                    │  ├─ SQLite (Prisma)   │
- ┌─────────────────┐   highlights + PDF text       │  ├─ OpenRouter call   │
- │ Dashboard's PDF  │ ─────────────────────────────▶│  └─ Puppeteer → PDF   │
- │ upload/highlighter (session cookie)             │                       │
- └─────────────────┘                              └───────────┬───────────┘
-                                                                │
-                                                    Dashboard: browse, download PDF,
-                                                    re-generate, delete
-```
 
-## 1. Run the web app
+---
+
+## Phase 1: Run the Extension
+
+1. Open Chrome.
+2. Go to `chrome://extensions`.
+3. Enable Developer Mode.
+4. Click **Load unpacked**.
+5. Select the `extension/` folder.
+6. Open any webpage.
+7. Highlight text.
+8. Open the extension popup.
+9. Click **Save Current Selection**.
+
+The popup stores highlights locally using `chrome.storage.local`.
+
+---
+
+## Phase 2: Run the Web App
+
+`web/` is a ready-to-run Next.js app.
 
 ```bash
 cd web
 npm install
-cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `web/.env.local` (already created) and set your Gemini key:
 
-- `DASHBOARD_PASSWORD` — the password you'll use to log into the dashboard.
-- `SESSION_SECRET` — any long random string (signs the login session cookie).
-- `OPENROUTER_API_KEY` — from https://openrouter.ai/keys. You can leave this blank and set it
-  later from the dashboard's Settings page instead.
-- `OPENROUTER_MODEL` — defaults to `openai/gpt-4o-mini`; any OpenRouter model id works.
+```env
+GEMINI_API_KEY=your_gemini_api_key
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-Then:
+# Leave blank to use the built-in local file store (see Phase 3).
+NEXT_PUBLIC_SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Optional later for PDF generation:
 
 ```bash
-npx prisma migrate deploy
+npm install puppeteer
+```
+
+Run:
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000, log in with `DASHBOARD_PASSWORD`, and go to **Settings** →
-**Generate token**. Copy that token — it's only shown once.
+`/dashboard` should now load with zero other setup.
 
-For a real deployment, run `npm run build && npm run start` on a server you control (a VPS,
-a home server, etc.). The summary/PDF pipeline runs Puppeteer (headless Chromium) and writes
-files to `web/storage/pdfs/`, so it needs a persistent, long-running Node process — not a
-one-shot serverless function.
+---
 
-## 2. Load the extension
+## Phase 3: Storage — local by default, Supabase when you want it
 
-1. Go to `chrome://extensions` (or the equivalent in your Chromium-based browser).
-2. Turn on **Developer mode**.
-3. Click **Load unpacked** and select the `extension/` folder.
-4. Click the extension's icon → **Settings**, and enter:
-   - **Server URL**: where the web app is running (e.g. `http://localhost:3000`, or your
-     deployed URL).
-   - **API token**: the one you generated in the dashboard's Settings page.
+The app picks its storage backend at request time, via `web/lib/store/index.ts`:
 
-## 3. Highlight something
+- **`NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` blank or unset (default):** everything is stored in a single JSON file at `web/.local-data/db.json`, created automatically on first write. No external service needed — this is what makes `npm run dev` work immediately after `npm install`.
+- **Both set to real values:** the app uses Supabase instead. Create the tables first:
 
-**On a webpage:** select text, a small color toolbar appears above the selection — pick a
-color. Open the extension popup to see everything you've highlighted on the current page,
-give the document a title, and click **Save & summarize**. It's sent to your server, run
-through the LLM, turned into a PDF, and you're taken straight to it in the dashboard.
+  ```sql
+  -- paste contents of supabase/schema.sql into the Supabase SQL editor
+  ```
 
-**In a PDF:** on the dashboard, go to **Upload a PDF**, choose a file, select text in the
-rendered pages the same way, and click **Generate summary**.
+Both backends implement the same `DataStore` interface (`web/lib/store/types.ts`), so switching is just setting those two env vars — no code changes. This also means swapping to a different backend later (anything other than Supabase) only requires writing one new file that implements `DataStore`, alongside `localStore.ts` and `supabaseStore.ts`.
 
-Highlight colors and what they're meant to represent (used to prompt the LLM, and shown as
-labels in the summary):
+The local file store is fine for trying the app out or single-user local development; it is not meant for concurrent multi-user use.
 
-| Color | Meaning |
-| --- | --- |
-| 🟡 Yellow | Key point |
-| 🟢 Green | Evidence |
-| 🔵 Blue | Definition |
-| 🩷 Pink | Question |
-| 🟠 Orange | Action item |
+---
 
-## Notes & limitations
+## Current MVP Behavior
 
-- **Single user.** There's no multi-account system — one dashboard password, one API token,
-  one OpenRouter key. This is meant to be self-hosted for personal use, not deployed as a
-  public multi-tenant service.
-- **Highlights aren't persisted until you save.** Reloading a page (or the PDF viewer) before
-  clicking "Save & summarize" clears the in-progress highlights on that page — submit before
-  navigating away.
-- **Document context is truncated** to roughly the first 40,000 characters before being sent
-  to the LLM, to keep prompts within typical context-window/cost limits. Very long
-  pages/PDFs will have highlights near the end explained with less surrounding context.
-- **Puppeteer needs a full Chromium** to render PDFs; if you deploy somewhere Chromium isn't
-  preinstalled, `npm install` (in `web/`) downloads one for you via the `puppeteer` package.
+The extension currently sends highlights to:
 
-## Repo layout
-
+```txt
+http://localhost:3000/api/sessions
 ```
-extension/     Manifest V3 browser extension (content script, popup, options page)
-web/           Next.js dashboard + API + PDF/LLM pipeline (see web/README.md)
+
+You can change this in:
+
+```txt
+extension/popup.js
 ```
+
+Search for:
+
+```js
+const API_BASE = "http://localhost:3000";
+```
+
+---
+
+## Next Improvements
+
+1. Add real authentication.
+2. Link extension user to web app account.
+3. Add better surrounding context extraction.
+4. Add embeddings with pgvector.
+5. Add Supabase Storage PDF upload.
+6. Add source citations in chat answers.
+7. Add share links with permissions.
